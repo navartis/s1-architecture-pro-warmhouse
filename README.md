@@ -62,6 +62,7 @@
 ### 5. Визуализация контекста системы — диаграмма С4
 
 ![Умный дом. Диаграмма контекста.](./docs/context.png)
+
 Исходник: [`docs/context.puml`](./docs/context.puml).
 
 # Задание 2. Проектирование микросервисной архитектуры
@@ -71,6 +72,7 @@
 **Диаграмма контейнеров (Containers)**
 
 ![Умный дом. Диаграмма контейнеров.](./docs/containers.png)
+
 Исходник: [`docs/containers.puml`](./docs/containers.puml).
 
 **Диаграмма компонентов (Components)**
@@ -78,16 +80,19 @@
 Device Service:
 
 ![Device Service. Диаграмма компонента.](./docs/components-device.png)
+
 Исходник: [`docs/components-device.puml`](./docs/components-device.puml)
 
 Telemetry Service:
 
 ![Telemetry Service. Диаграмма компонента.](./docs/components-telemetry.png)
+
 Исходник: [`docs/components-telemetry.puml`](./docs/components-telemetry.puml)
 
 Heating Service:
 
 ![Heating Service. Диаграмма компонента.](./docs/components-heating.png)
+
 Исходник: [`docs/components-heating.puml`](./docs/components-heating.puml)
 
 **Диаграмма кода (Code)**
@@ -96,11 +101,13 @@ Heating Service:
 На мой взгляд диаграмма последовательности имеет большую ценность, чем диаграмма кода.
 
 ![Device Service. Команда устройству. Диаграмма последовательности.](./docs/code-command-sequence.png)
+
 Исходник: [`docs/code-command-sequence.puml`](./docs/code-command-sequence.puml)
 
 # Задание 3. Разработка ER-диаграммы
 
 ![Умный дом. ER диаграмма.](./docs/er.png)
+
 Исходник: [`docs/er.puml`](./docs/er.puml)
 
 # Задание 4. Создание и документирование API
