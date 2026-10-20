@@ -1,0 +1,59 @@
+@startuml
+title Device Service. Команда устройству. Диаграмма последовательности.
+
+autonumber
+
+actor "Пользователь (авторизован)" as user
+participant "API Gateway" as gateway
+participant "Heating Service" as heating
+
+box "Device Service"
+participant "REST API handler" as api
+participant "Command Handler" as cmd
+participant "Device Registry" as registry
+participant "State Manager" as state
+participant "Protocol Adapters" as adapter
+participant "Device Repository" as repo
+end box
+
+database "Device DB" as db
+queue "Message Broker" as broker
+participant "Устройство (MQTT)" as device
+
+user -> gateway: Включить отопление
+gateway -> heating: POST /heating/commands
+heating -> api: POST /devices/{id}/commands\n{"action": "heat_on"}
+
+api -> cmd: Handle(deviceID, command)
+cmd -> registry: Get(deviceID)
+registry -> repo: SelectDevice(ctx, deviceID)
+repo -> db: SQL: select device by id
+db --> repo: row
+repo --> registry: Device
+registry --> cmd: Device
+
+alt device == nil
+  cmd --> api: 404 Not Found
+  api --> heating: 404
+  heating --> gateway: 404
+  gateway --> user: Устройство не найдено
+else device доступно
+  cmd -> adapter: Dispatch(device, command)
+  adapter -> broker: Publish(devices/{id}/commands,\ncorrelation_id)
+  cmd --> api: 202 Accepted
+  api --> heating: 202
+  heating --> gateway: 202
+  gateway --> user: Команда принята
+end
+
+== Асинхронно: доставка и подтверждение ==
+
+broker -> device: Доставка команды
+device --> broker: Новое состояние "on"
+broker --> adapter: Событие состояния
+
+adapter -> state: Update(deviceID, "on")
+state -> repo: SaveState(deviceID, state)
+repo -> db: SQL: update device state
+
+@enduml

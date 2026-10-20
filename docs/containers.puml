@@ -5,7 +5,8 @@ title Умный дом. Диаграмма контейнеров.
 
 Person(user, "Пользователь", "Управляет домом через приложение")
 
-System_Ext(devices, "Устройства и датчики", "Партнёрские устройства по стандартным протоколам")
+System_Ext(devices, "Устройства и датчики", "Партнёрские устройства с исходящим подключением")
+System_Ext(partner_cloud, "Облака партнёров", "API вендоров для устройств без прямого протокола")
 
 System_Boundary(ecosystem, "Экосистема умного дома") {
   Container(web_app, "Web Application", "JavaScript", "Веб-интерфейс пользователя")
@@ -42,13 +43,16 @@ Rel(gateway, gates, "Управление воротами", "REST")
 Rel(gateway, surveillance, "Просмотр видео", "REST")
 Rel(gateway, telemetry, "Чтение телеметрии", "REST")
 
-Rel(devices, broker, "Публикуют телеметрию", "MQTT")
+BiRel(devices, broker, "Телеметрия и команды", "MQTT/TLS")
 Rel(broker, telemetry, "Доставляет события", "AMQP/MQTT")
 
 Rel(heating, device, "Передаёт команду", "REST")
 Rel(lighting, device, "Передаёт команду", "REST")
 Rel(gates, device, "Передаёт команду", "REST")
-Rel(device, devices, "Отправляет команды", "Протоколы устройств")
+
+BiRel(device, broker, "Команды и события состояния", "AMQP")
+Rel(device, partner_cloud, "Управляет устройствами вендора", "HTTPS/REST")
+Rel(partner_cloud, devices, "Доставляет команды своим устройствам", "Протокол вендора")
 
 Rel(user_house, db_user, "Читает/пишет", "SQL")
 Rel(device, db_device, "Читает/пишет", "SQL")
