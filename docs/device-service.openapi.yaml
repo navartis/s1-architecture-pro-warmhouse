@@ -1,0 +1,239 @@
+openapi: 3.0.3
+
+info:
+  title: Device Service API
+  version: 1.0.0
+  description: >
+    Реестр устройств, их состояние и команды. Вызывается через API Gateway.
+
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Публичный вход через API Gateway
+
+tags:
+  - name: devices
+    description: Устройства и команды
+
+security:
+  - bearerAuth: []
+
+paths:
+  /devices/{deviceId}:
+    parameters:
+      - $ref: '#/components/parameters/DeviceId'
+    get:
+      tags: [devices]
+      summary: Информация об устройстве
+      operationId: getDevice
+      responses:
+        '200':
+          description: Устройство найдено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Device'
+              examples:
+                onlineDevice:
+                  summary: Датчик температуры
+                  value:
+                    id: 3f0c1d2e-8a71-4b52-9c63-1a2b3c4d5e6f
+                    houseId: 7a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d
+                    typeId: 5c6d7e8f-9a0b-4c1d-8e2f-3a4b5c6d7e8f
+                    serialNumber: TH-000421
+                    status: "off"
+        '404':
+          description: Устройство не найдено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                notFound:
+                  value:
+                    code: device_not_found
+                    message: Устройство не найдено
+        '500':
+          description: Внутренняя ошибка
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    patch:
+      tags: [devices]
+      summary: Обновление состояния устройства
+      operationId: updateDevice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceUpdate'
+            examples:
+              turnOn:
+                summary: Включить устройство
+                value:
+                  status: "on"
+      responses:
+        '200':
+          description: Состояние обновлено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Device'
+              examples:
+                updated:
+                  value:
+                    id: 3f0c1d2e-8a71-4b52-9c63-1a2b3c4d5e6f
+                    houseId: 7a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d
+                    typeId: 5c6d7e8f-9a0b-4c1d-8e2f-3a4b5c6d7e8f
+                    serialNumber: TH-000421
+                    status: "on"
+        '400':
+          description: Некорректный запрос
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Устройство не найдено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Внутренняя ошибка
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /devices/{deviceId}/commands:
+    parameters:
+      - $ref: '#/components/parameters/DeviceId'
+    post:
+      tags: [devices]
+      summary: Отправить команду устройству
+      description: >
+        Команда публикуется в брокер. Подтверждение приходит событием состояния
+        (asyncapi.yaml).
+      operationId: sendDeviceCommand
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceCommand'
+            examples:
+              heatOn:
+                summary: Включить отопление
+                value:
+                  action: heat_on
+      responses:
+        '202':
+          description: Команда принята в обработку
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommandAccepted'
+              examples:
+                accepted:
+                  value:
+                    commandId: 9d8c7b6a-5f4e-4d3c-8b2a-1f0e9d8c7b6a
+                    status: accepted
+        '400':
+          description: Некорректный запрос
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Устройство не найдено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Внутренняя ошибка
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    DeviceId:
+      name: deviceId
+      in: path
+      required: true
+      description: Идентификатор устройства
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    Device:
+      type: object
+      required: [id, houseId, typeId, serialNumber, status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        houseId:
+          type: string
+          format: uuid
+          description: Дом, которому принадлежит устройство
+        typeId:
+          type: string
+          format: uuid
+          description: Тип устройства
+        serialNumber:
+          type: string
+        status:
+          type: string
+          enum: ["on", "off"]
+          description: Состояние прибора
+
+    DeviceUpdate:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: ["on", "off"]
+
+    DeviceCommand:
+      type: object
+      required: [action]
+      properties:
+        action:
+          type: string
+          enum: [heat_on, heat_off, light_on, light_off, gates_open, gates_close]
+
+    CommandAccepted:
+      type: object
+      required: [commandId, status]
+      properties:
+        commandId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [accepted]
+
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          example: device_not_found
+        message:
+          type: string
+          example: Устройство не найдено

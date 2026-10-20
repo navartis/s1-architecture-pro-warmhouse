@@ -1,0 +1,28 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/v2.14.0/C4_Component.puml
+
+title Telemetry Service. Диаграмма компонента.
+
+Container(gateway, "API Gateway", "REST", "Единая точка входа")
+ContainerQueue(broker, "Message Broker", "AMQP/MQTT", "Асинхронная доставка событий")
+System_Ext(devices, "Устройства и датчики", "Партнёрские устройства")
+
+Container_Boundary(telemetry_svc, "Telemetry Service") {
+  Component(ingest, "Ingestion Consumer", "Python", "Подписка на брокер, проверка и нормализация измерений")
+  Component(api, "Read API", "Python, Flask", "История и последнее значение по device_id")
+  Component(store, "Telemetry Store", "Python", "Запись измерений и выборка по окну времени")
+  Component(repo, "Telemetry Repository", "Python, psycopg", "Доступ к Telemetry DB")
+}
+
+ContainerDb(db, "Telemetry DB", "PostgreSQL", "Точки телеметрии")
+
+Rel(devices, broker, "Публикуют телеметрию", "MQTT")
+Rel(broker, ingest, "Доставляет измерения", "AMQP/MQTT")
+Rel(gateway, api, "Чтение телеметрии", "REST")
+
+Rel(ingest, store, "Сохраняет точку")
+Rel(api, store, "Запрашивает историю")
+Rel(store, repo, "Читает/пишет")
+Rel(repo, db, "SQL")
+
+@enduml

@@ -1,0 +1,42 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/v2.14.0/C4_Component.puml
+
+title Device Service. Диаграмма компонента.
+
+Container(gateway, "API Gateway", "REST", "Единая точка входа")
+Container(heating, "Heating Service", "REST", "Управление отоплением")
+Container(lighting, "Lighting Service", "REST", "Управление освещением")
+Container(gates, "Gates Service", "REST", "Управление воротами")
+ContainerQueue(broker, "Message Broker", "AMQP", "Доставка команд и событий состояния")
+System_Ext(partner_cloud, "Облака партнёров", "API вендоров для устройств без прямого протокола")
+
+Container_Boundary(device_svc, "Device Service") {
+  Component(api, "REST API", "Go", "Приём запросов от API Gateway")
+  Component(commands, "Command Handler", "Go", "Приём команд от сервисов, валидация и маршрутизация")
+  Component(registry, "Device Registry", "Go", "Типы устройств, серийные номера, привязка к дому")
+  Component(state, "State Manager", "Go", "Последнее известное состояние устройства")
+  Component(adapters, "Protocol Adapters", "Go", "Публикация в брокер и вызовы API облаков партнёров")
+  Component(repo, "Device Repository", "Go", "Доступ к Device DB")
+}
+
+ContainerDb(db, "Device DB", "PostgreSQL", "Реестр устройств и состояния")
+
+Rel(gateway, api, "Список и подключение устройств", "REST")
+Rel(heating, commands, "Команда отопления", "REST")
+Rel(lighting, commands, "Команда освещения", "REST")
+Rel(gates, commands, "Команда воротам", "REST")
+
+Rel(api, registry, "Читает и меняет реестр")
+Rel(api, state, "Читает состояние")
+Rel(api, commands, "Пользовательская команда")
+Rel(commands, registry, "Проверяет устройство")
+Rel(commands, adapters, "Передаёт команду")
+BiRel(adapters, broker, "Команды и события состояния", "AMQP")
+Rel(adapters, partner_cloud, "Вызывает API вендора", "HTTPS/REST")
+Rel(adapters, state, "Обновляет состояние")
+
+Rel(registry, repo, "Читает/пишет")
+Rel(state, repo, "Читает/пишет")
+Rel(repo, db, "SQL")
+
+@enduml

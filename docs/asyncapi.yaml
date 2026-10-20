@@ -1,0 +1,140 @@
+asyncapi: 2.6.0
+
+id: urn:warmhouse:async-events
+
+info:
+  title: Умный дом. Асинхронные события.
+  version: 1.0.0
+  description: >
+    Телеметрия, команды, состояние.
+
+servers:
+  production:
+    url: localhost:1883
+    protocol: mqtt
+    description: Брокер для устройств и облаков партнёров
+
+defaultContentType: application/json
+
+tags:
+  - name: telemetry
+    description: Поток показаний от устройств
+  - name: commands
+    description: Доставка команд устройству
+  - name: state
+    description: События состояния и подтверждения
+
+channels:
+  devices/{deviceId}/telemetry:
+    description: Показания устройства, читает Telemetry Service.
+    parameters:
+      deviceId:
+        schema:
+          type: string
+          format: uuid
+    subscribe:
+      operationId: receiveTelemetry
+      summary: Telemetry Service принимает показание
+      message:
+        $ref: '#/components/messages/TelemetryReport'
+
+  devices/{deviceId}/commands:
+    description: Команды устройству, публикует Device Service.
+    parameters:
+      deviceId:
+        schema:
+          type: string
+          format: uuid
+    publish:
+      operationId: publishDeviceCommand
+      summary: Device Service публикует команду
+      message:
+        $ref: '#/components/messages/DeviceCommand'
+
+  devices/{deviceId}/state:
+    description: Состояние устройства и подтверждение команды, читает Device Service.
+    parameters:
+      deviceId:
+        schema:
+          type: string
+          format: uuid
+    subscribe:
+      operationId: receiveDeviceState
+      summary: Device Service принимает событие состояния
+      message:
+        $ref: '#/components/messages/DeviceState'
+
+components:
+  messages:
+    TelemetryReport:
+      messageId: telemetryReport
+      payload:
+        $ref: '#/components/schemas/TelemetryPayload'
+      examples:
+        - name: temperature
+          payload:
+            deviceId: 3f0c1d2e-8a71-4b52-9c63-1a2b3c4d5e6f
+            value: 21.7
+            unit: celsius
+            recordedAt: '2026-10-20T14:20:00Z'
+
+    DeviceCommand:
+      messageId: deviceCommand
+      payload:
+        $ref: '#/components/schemas/CommandPayload'
+      examples:
+        - name: heatOn
+          payload:
+            commandId: 9d8c7b6a-5f4e-4d3c-8b2a-1f0e9d8c7b6a
+            action: heat_on
+
+    DeviceState:
+      messageId: deviceState
+      payload:
+        $ref: '#/components/schemas/StatePayload'
+      examples:
+        - name: commandAccepted
+          payload:
+            commandId: 9d8c7b6a-5f4e-4d3c-8b2a-1f0e9d8c7b6a
+            status: "on"
+
+  schemas:
+    TelemetryPayload:
+      type: object
+      required: [deviceId, value, recordedAt]
+      properties:
+        deviceId:
+          type: string
+        value:
+          type: number
+          format: double
+        unit:
+          type: string
+          example: celsius
+        recordedAt:
+          type: string
+          format: date-time
+
+    CommandPayload:
+      type: object
+      required: [commandId, action]
+      properties:
+        commandId:
+          type: string
+          format: uuid
+          description: Идентификатор команды для сопоставления с подтверждением
+        action:
+          type: string
+          enum: [heat_on, heat_off, light_on, light_off, gates_open, gates_close]
+
+    StatePayload:
+      type: object
+      required: [status]
+      properties:
+        commandId:
+          type: string
+          format: uuid
+          description: Команда, к которой относится подтверждение
+        status:
+          type: string
+          enum: ["on", "off"]

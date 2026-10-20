@@ -32,6 +32,12 @@ func main() {
 	temperatureService := services.NewTemperatureService(temperatureAPIURL)
 	log.Printf("Temperature service initialized with API URL: %s\n", temperatureAPIURL)
 
+	// REST mock service as replacement for message broker
+	deviceServiceURL := getEnv("DEVICE_SERVICE_URL", "http://device-service:8082")
+	telemetryServiceURL := getEnv("TELEMETRY_SERVICE_URL", "http://telemetry-service:8083")
+	telemetryClient := services.NewTelemetryClient(telemetryServiceURL)
+	log.Printf("Device service: %s, telemetry service: %s\n", deviceServiceURL, telemetryServiceURL)
+
 	// Initialize router
 	router := gin.Default()
 
@@ -46,8 +52,12 @@ func main() {
 	apiRoutes := router.Group("/api/v1")
 
 	// Register sensor routes
-	sensorHandler := handlers.NewSensorHandler(database, temperatureService)
+	sensorHandler := handlers.NewSensorHandler(database, temperatureService, telemetryClient)
 	sensorHandler.RegisterRoutes(apiRoutes)
+
+	// Routes served by new microservices (strangler fig migration)
+	proxyHandler := handlers.NewProxyHandler(deviceServiceURL, telemetryServiceURL)
+	proxyHandler.RegisterRoutes(apiRoutes)
 
 	// Start server
 	srv := &http.Server{

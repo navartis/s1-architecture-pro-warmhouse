@@ -1,31 +1,60 @@
 #!/bin/bash
 
-# Exit on any error
-set -e
+set -euo pipefail
 
-echo "Starting the Smart Home Sensor API..."
-echo "Building and starting containers..."
-docker-compose up --build -d
+cd "$(dirname "$0")"
 
-echo "Waiting for services to be ready..."
-# Wait for PostgreSQL to be ready
-for i in {1..30}; do
-  if docker exec smarthome-postgres pg_isready -U postgres > /dev/null 2>&1; then
-    echo "PostgreSQL is ready!"
-    break
-  fi
-  echo "Waiting for PostgreSQL to start... ($i/30)"
-  sleep 1
-done
-
-# Check if PostgreSQL is ready
-if ! docker exec smarthome-postgres pg_isready -U postgres > /dev/null 2>&1; then
-  echo "Error: PostgreSQL did not start within the expected time."
+if docker compose version > /dev/null 2>&1; then
+  COMPOSE="docker compose"
+elif command -v docker-compose > /dev/null 2>&1; then
+  COMPOSE="docker-compose"
+else
+  echo "Error: Docker Compose не найден (ни 'docker compose', ни 'docker-compose')."
   exit 1
 fi
 
-echo "All services are up and running!"
-echo "The API is available at http://localhost:8080"
+echo "Starting the Smart Home stack..."
+$COMPOSE up -d --build
+
+wait_for() {
+  local name="$1"
+  local url="$2"
+  local attempts=60
+
+  for ((i = 1; i <= attempts; i++)); do
+    if curl -fsS "$url" > /dev/null 2>&1; then
+      echo "  $name ready"
+      return 0
+    fi
+    sleep 1
+  done
+
+  echo "  $name did not respond within ${attempts}s: $url"
+  return 1
+}
+
+echo "Waiting for services to respond..."
+failed=0
+wait_for "monolith        (8080)" http://localhost:8080/health || failed=1
+wait_for "temperature-api (8081)" http://localhost:8081/health || failed=1
+wait_for "device-service  (8082)" http://localhost:8082/health || failed=1
+wait_for "telemetry-service (8083)" http://localhost:8083/health || failed=1
+
+if [ "$failed" -ne 0 ]; then
+  echo ""
+  echo "Some services are not responding. Check the logs:"
+  echo "  $COMPOSE logs -f"
+  exit 1
+fi
+
 echo ""
-echo "To view logs, run: docker-compose logs -f"
-echo "To stop the services, run: docker-compose down"
+echo "All services are up:"
+echo "  monolith           http://localhost:8080"
+echo "  temperature-api    http://localhost:8081"
+echo "  device-service     http://localhost:8082"
+echo "  telemetry-service  http://localhost:8083"
+echo ""
+echo "Examples:"
+echo "  curl localhost:8080/api/v1/sensors"
+echo "  curl localhost:8080/api/v1/devices"
+echo "  curl 'localhost:8080/api/v1/telemetry?deviceId=1'"
