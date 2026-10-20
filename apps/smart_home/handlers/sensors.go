@@ -18,13 +18,15 @@ import (
 type SensorHandler struct {
 	DB                 *db.DB
 	TemperatureService *services.TemperatureService
+	Telemetry          *services.TelemetryClient
 }
 
 // NewSensorHandler creates a new SensorHandler
-func NewSensorHandler(db *db.DB, temperatureService *services.TemperatureService) *SensorHandler {
+func NewSensorHandler(db *db.DB, temperatureService *services.TemperatureService, telemetry *services.TelemetryClient) *SensorHandler {
 	return &SensorHandler{
 		DB:                 db,
 		TemperatureService: temperatureService,
+		Telemetry:          telemetry,
 	}
 }
 
@@ -60,6 +62,13 @@ func (h *SensorHandler) GetSensors(c *gin.Context) {
 				sensors[i].Status = tempData.Status
 				sensors[i].LastUpdated = tempData.Timestamp
 				log.Printf("Updated temperature data for sensor %d from external API", sensor.ID)
+
+				// history component is being migrated from the monolith to a separate service (strangler fig)
+				if h.Telemetry != nil {
+					if err := h.Telemetry.Send(c.Request.Context(), strconv.Itoa(sensor.ID), tempData.Value, tempData.Unit); err != nil {
+						log.Printf("Failed to store telemetry for sensor %d: %v", sensor.ID, err)
+					}
+				}
 			} else {
 				log.Printf("Failed to fetch temperature data for sensor %d: %v", sensor.ID, err)
 			}
