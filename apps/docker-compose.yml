@@ -31,6 +31,78 @@ services:
     networks:
       - smarthome-network
 
+  device-db:
+    image: postgres:16-alpine
+    container_name: smarthome-device-db
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=devices
+    volumes:
+      - device_data:/var/lib/postgresql/data
+      - ./device-service/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d devices"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+    networks:
+      - smarthome-network
+
+  telemetry-db:
+    image: postgres:16-alpine
+    container_name: smarthome-telemetry-db
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=telemetry
+    volumes:
+      - telemetry_data:/var/lib/postgresql/data
+      - ./telemetry-service/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d telemetry"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+    networks:
+      - smarthome-network
+
+  device-service:
+    build:
+      context: ./device-service
+      dockerfile: Dockerfile
+    container_name: smarthome-device-service
+    depends_on:
+      device-db:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgres://postgres:postgres@device-db:5432/devices
+      - PORT=8082
+    ports:
+      - "8082:8082"
+    restart: unless-stopped
+    networks:
+      - smarthome-network
+
+  telemetry-service:
+    build:
+      context: ./telemetry-service
+      dockerfile: Dockerfile
+    container_name: smarthome-telemetry-service
+    depends_on:
+      telemetry-db:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgres://postgres:postgres@telemetry-db:5432/telemetry
+      - PORT=8083
+    ports:
+      - "8083:8083"
+    restart: unless-stopped
+    networks:
+      - smarthome-network
+
   app:
     build:
       context: ./smart_home
@@ -41,9 +113,15 @@ services:
         condition: service_healthy
       temperature-api:
         condition: service_started
+      device-service:
+        condition: service_started
+      telemetry-service:
+        condition: service_started
     environment:
       - DATABASE_URL=postgres://postgres:postgres@postgres:5432/smarthome
       - TEMPERATURE_API_URL=http://temperature-api:8081
+      - DEVICE_SERVICE_URL=http://device-service:8082
+      - TELEMETRY_SERVICE_URL=http://telemetry-service:8083
     ports:
       - "8080:8080"
     restart: unless-stopped
@@ -52,6 +130,8 @@ services:
 
 volumes:
   postgres_data:
+  device_data:
+  telemetry_data:
 
 networks:
   smarthome-network:
