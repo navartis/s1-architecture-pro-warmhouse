@@ -1,0 +1,180 @@
+openapi: 3.0.3
+
+info:
+  title: Telemetry Service API
+  version: 1.0.0
+  description: >
+    Приём и чтение показаний. Основной поток идёт через брокер (asyncapi.yaml),
+    HTTP нужен для устройств без MQTT и для вебхуков облаков партнёров.
+
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Публичный вход через API Gateway
+
+tags:
+  - name: telemetry
+    description: Приём и чтение телеметрии
+
+security:
+  - bearerAuth: []
+
+paths:
+  /telemetry:
+    post:
+      tags: [telemetry]
+      summary: Принять показание
+      operationId: ingestTelemetry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TelemetryRecord'
+            examples:
+              temperature:
+                summary: Температура 21.7 °C
+                value:
+                  deviceId: 3f0c1d2e-8a71-4b52-9c63-1a2b3c4d5e6f
+                  value: 21.7
+                  unit: celsius
+                  recordedAt: '2026-10-20T14:20:00Z'
+      responses:
+        '201':
+          description: Показание сохранено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelemetryPoint'
+              examples:
+                stored:
+                  value:
+                    id: c1d2e3f4-a5b6-4c7d-8e9f-0a1b2c3d4e5f
+                    deviceId: 3f0c1d2e-8a71-4b52-9c63-1a2b3c4d5e6f
+                    value: 21.7
+                    unit: celsius
+                    recordedAt: '2026-10-20T14:20:00Z'
+        '400':
+          description: Некорректный запрос
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Устройство не зарегистрировано
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Внутренняя ошибка
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    get:
+      tags: [telemetry]
+      summary: История показаний устройства
+      operationId: listTelemetry
+      parameters:
+        - name: deviceId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: from
+          in: query
+          required: false
+          description: Начало интервала
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          required: false
+          description: Конец интервала
+          schema:
+            type: string
+            format: date-time
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 100
+      responses:
+        '200':
+          description: Список показаний
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TelemetryPoint'
+              examples:
+                list:
+                  value:
+                    - id: c1d2e3f4-a5b6-4c7d-8e9f-0a1b2c3d4e5f
+                      deviceId: 3f0c1d2e-8a71-4b52-9c63-1a2b3c4d5e6f
+                      value: 21.7
+                      unit: celsius
+                      recordedAt: '2026-10-20T14:20:00Z'
+        '404':
+          description: Устройство не зарегистрировано
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Внутренняя ошибка
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    TelemetryRecord:
+      type: object
+      required: [deviceId, value, recordedAt]
+      properties:
+        deviceId:
+          type: string
+          format: uuid
+        value:
+          type: number
+          format: double
+        unit:
+          type: string
+          example: celsius
+        recordedAt:
+          type: string
+          format: date-time
+
+    TelemetryPoint:
+      allOf:
+        - $ref: '#/components/schemas/TelemetryRecord'
+        - type: object
+          required: [id]
+          properties:
+            id:
+              type: string
+              format: uuid
+
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          example: device_not_found
+        message:
+          type: string
+          example: Устройство не зарегистрировано

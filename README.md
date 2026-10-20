@@ -109,11 +109,15 @@ Heating Service:
 
 ### 1. Тип API
 
-Укажите, какой тип API вы будете использовать для взаимодействия микросервисов. Объясните своё решение.
+**REST (OpenAPI 3.0)** — для синхронных операций.
+
+**AsyncAPI (MQTT через брокер)** — для асинхронных потоков: показания устройств, доставка команды, событие состояния с подтверждением. Устройства находятся за NAT и держат исходящее соединение с брокером, поэтому команда не может быть доставлена к ним HTTP-запросом.
 
 ### 2. Документация API
 
-Здесь приложите ссылки на документацию API для микросервисов, которые вы спроектировали в первой части проектной работы. Для документирования используйте Swagger/OpenAPI или AsyncAPI.
+- Device Service: [`docs/device-service.openapi.yaml`](./docs/device-service.openapi.yaml)
+- Telemetry Service: [`docs/telemetry-service.openapi.yaml`](./docs/telemetry-service.openapi.yaml)
+- Асинхронные события: [`docs/asyncapi.yaml`](./docs/asyncapi.yaml)
 
 # Задание 5. Работа с docker и docker-compose
 
