@@ -1,0 +1,58 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/v2.14.0/C4_Container.puml
+
+title Умный дом. Диаграмма контейнеров.
+
+Person(user, "Пользователь", "Управляет домом через приложение")
+
+System_Ext(devices, "Устройства и датчики", "Партнёрские устройства по стандартным протоколам")
+
+System_Boundary(ecosystem, "Экосистема умного дома") {
+  Container(web_app, "Web Application", "JavaScript", "Веб-интерфейс пользователя")
+  Container(mobile_app, "Mobile Application", "Swift/Kotlin", "Мобильное приложение")
+
+  Container(gateway, "API Gateway", "REST", "Единая точка входа, аутентификация и маршрутизация")
+
+  Container(user_house, "User & House Service", "REST", "Пользователи, дома, владение")
+  Container(device, "Device Service", "Go", "Реестр устройств и команды")
+  Container(heating, "Heating Service", "REST", "Управление отоплением")
+  Container(lighting, "Lighting Service", "REST", "Управление освещением")
+  Container(gates, "Gates Service", "REST", "Управление воротами")
+  Container(surveillance, "Surveillance Service", "REST", "Видеонаблюдение")
+  Container(telemetry, "Telemetry Service", "Python", "Приём и хранение телеметрии")
+
+  ContainerQueue(broker, "Message Broker", "AMQP", "Асинхронная доставка событий")
+
+  ContainerDb(db_user, "User DB", "PostgreSQL", "Пользователи и дома")
+  ContainerDb(db_device, "Device DB", "PostgreSQL", "Реестр устройств")
+  ContainerDb(db_surveillance, "Surveillance DB", "PostgreSQL", "Записи и метаданные")
+  ContainerDb(db_telemetry, "Telemetry DB", "PostgreSQL", "Хранилище телеметрии")
+}
+
+Rel(user, web_app, "Использует")
+Rel(user, mobile_app, "Использует")
+Rel(web_app, gateway, "Вызывает API", "REST/HTTPS")
+Rel(mobile_app, gateway, "Вызывает API", "REST/HTTPS")
+
+Rel(gateway, user_house, "Профиль и дома", "REST")
+Rel(gateway, device, "Список и подключение устройств", "REST")
+Rel(gateway, heating, "Управление отоплением", "REST")
+Rel(gateway, lighting, "Управление освещением", "REST")
+Rel(gateway, gates, "Управление воротами", "REST")
+Rel(gateway, surveillance, "Просмотр видео", "REST")
+Rel(gateway, telemetry, "Чтение телеметрии", "REST")
+
+Rel(devices, broker, "Публикуют телеметрию", "MQTT")
+Rel(broker, telemetry, "Доставляет события", "AMQP/MQTT")
+
+Rel(heating, device, "Передаёт команду", "REST")
+Rel(lighting, device, "Передаёт команду", "REST")
+Rel(gates, device, "Передаёт команду", "REST")
+Rel(device, devices, "Отправляет команды", "Протоколы устройств")
+
+Rel(user_house, db_user, "Читает/пишет", "SQL")
+Rel(device, db_device, "Читает/пишет", "SQL")
+Rel(surveillance, db_surveillance, "Читает/пишет", "SQL")
+Rel(telemetry, db_telemetry, "Читает/пишет", "SQL")
+
+@enduml
