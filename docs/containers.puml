@@ -49,6 +49,8 @@ Rel(broker, telemetry, "Доставляет события", "AMQP/MQTT")
 Rel(heating, device, "Передаёт команду", "REST")
 Rel(lighting, device, "Передаёт команду", "REST")
 Rel(gates, device, "Передаёт команду", "REST")
+Rel(surveillance, device, "Команды камерам", "REST")
+Rel(devices, surveillance, "Видеопоток", "RTSP/WebRTC")
 
 BiRel(device, broker, "Команды и события состояния", "AMQP")
 Rel(device, partner_cloud, "Управляет устройствами вендора", "HTTPS/REST")
