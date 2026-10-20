@@ -1,0 +1,55 @@
+@startuml
+title Умный дом. ER диаграмма.
+
+package "User & House DB" {
+  entity "User" as user {
+    id: uuid <<PK>>
+    --
+    phone_number: varchar
+  }
+
+  entity "House" as house {
+    id: uuid <<PK>>
+    --
+    user_id: uuid <<FK>>
+    address: varchar
+  }
+}
+
+package "Device DB" {
+  entity "DeviceType" as dtype {
+    id: uuid <<PK>>
+    --
+    name: varchar
+    kind: enum
+    transport: enum
+    vendor: varchar
+  }
+
+  entity "Device" as device {
+    id: uuid <<PK>>
+    --
+    house_id: uuid <<external ref>>
+    type_id: uuid <<FK>>
+    serial_number: varchar
+    status: enum
+  }
+}
+
+package "Telemetry DB" {
+  entity "TelemetryData" as telemetry {
+    id: uuid <<PK>>
+    --
+    device_id: uuid <<external ref>>
+    value: numeric
+    unit: varchar
+    recorded_at: timestamptz
+  }
+}
+
+user ||--o{ house
+house ||..o{ device: "Неявная связь между БД"
+dtype ||--o{ device
+device ||..o{ telemetry: "Неявная связь между БД"
+
+@enduml
