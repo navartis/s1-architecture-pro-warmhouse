@@ -72,11 +72,25 @@
 
 **Диаграмма контейнеров (Containers)**
 
-Добавьте диаграмму.
+![Умный дом. Диаграмма контейнеров.](./docs/containers.png)
+Исходник: [`docs/containers.puml`](./docs/containers.puml).
 
 **Диаграмма компонентов (Components)**
 
-Добавьте диаграмму для каждого из выделенных микросервисов.
+Device Service:
+
+![Device Service. Диаграмма компонента.](./docs/components-device.png)
+Исходник: [`docs/components-device.puml`](./docs/components-device.puml)
+
+Telemetry Service:
+
+![Telemetry Service. Диаграмма компонента.](./docs/components-telemetry.png)
+Исходник: [`docs/components-telemetry.puml`](./docs/components-telemetry.puml)
+
+Heating Service:
+
+![Heating Service. Диаграмма компонента.](./docs/components-heating.png)
+Исходник: [`docs/components-heating.puml`](./docs/components-heating.puml)
 
 **Диаграмма кода (Code)**
 
